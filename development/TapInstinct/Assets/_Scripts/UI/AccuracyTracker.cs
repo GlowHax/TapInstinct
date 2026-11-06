@@ -10,7 +10,7 @@ namespace TapInstinct.UI
         [SerializeField] private float totalAccuracySum = 0f;
 
         // Lifetime average accuracy: Starts at 100%
-        public float OverallAccuracy => totalTaps == 0 ? 100f : (totalAccuracySum / totalTaps) * 100f;
+        public float OverallAccuracy => totalTaps == 0 ? 0f : (totalAccuracySum / totalTaps) * 100f;
         public int OverallAccuracyInt => Mathf.Clamp(Mathf.RoundToInt(OverallAccuracy), 0, 100);
 
         // Normalized score 0.0 to 1.0 (for ambient color lerping)

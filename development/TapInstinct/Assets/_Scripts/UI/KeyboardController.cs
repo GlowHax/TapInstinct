@@ -491,14 +491,14 @@ namespace TapInstinct.UI
 
         private void UpdateAmbientGlow(float score)
         {
-            if (score >= 0.85f)
+            if (score >= 0.5f)
             {
-                float t = Mathf.InverseLerp(0.85f, 1.0f, score);
+                float t = Mathf.InverseLerp(0.5f, 1.0f, score);
                 targetGlowColor = Color.Lerp(midAccuracyColor, highAccuracyColor, t);
             }
             else
             {
-                float t = Mathf.InverseLerp(0.60f, 0.85f, score);
+                float t = Mathf.InverseLerp(0, 0.5f, score);
                 targetGlowColor = Color.Lerp(lowAccuracyColor, midAccuracyColor, t);
             }
         }
