@@ -9,6 +9,8 @@ namespace TapInstinct.UI
 {
     public class KeyboardController : MonoBehaviour, IPointerDownHandler
     {
+        public bool interactable = false;
+
         [Header("Prefab & Rows")]
         [SerializeField] private GameObject keyPrefab;
         [SerializeField] private RectTransform[] rows; // Row_0 to Row_4
@@ -59,78 +61,6 @@ namespace TapInstinct.UI
             public bool isSpecial;
             public bool isSpacer;
         }
-
-#if UNITY_EDITOR
-        private void Reset()
-        {
-            AutoAssignReferences();
-        }
-
-        [ContextMenu("Auto Assign References")]
-        public void AutoAssignReferences()
-        {
-            if (keyPrefab == null)
-            {
-                keyPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/KeyButton.prefab");
-            }
-
-            if (promptController == null)
-            {
-                promptController = Object.FindAnyObjectByType<TextPromptController>();
-            }
-
-            if (accuracyTracker == null)
-            {
-                accuracyTracker = GetComponent<AccuracyTracker>();
-                if (accuracyTracker == null)
-                {
-                    accuracyTracker = gameObject.AddComponent<AccuracyTracker>();
-                }
-            }
-
-            if (rows == null || rows.Length == 0)
-            {
-                var rowList = new List<RectTransform>();
-                for (int i = 0; i < 5; i++)
-                {
-                    Transform t = transform.Find($"Row_{i}");
-                    if (t != null && t.TryGetComponent<RectTransform>(out var rt))
-                    {
-                        rowList.Add(rt);
-                    }
-                }
-                rows = rowList.ToArray();
-            }
-        }
-
-        [UnityEditor.MenuItem("Tools/TapInstinct/Generate Keyboard")]
-        public static void GenerateKeyboardFromMenu()
-        {
-            var kb = Object.FindAnyObjectByType<KeyboardController>();
-            if (kb != null)
-            {
-                kb.GenerateKeyboard();
-                UnityEditor.EditorUtility.SetDirty(kb.gameObject);
-                UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(kb.gameObject.scene);
-            }
-            else
-            {
-                Debug.LogWarning("[KeyboardController] No KeyboardController found in current scene.");
-            }
-        }
-
-        [UnityEditor.MenuItem("Tools/TapInstinct/Clear Keyboard")]
-        public static void ClearKeyboardFromMenu()
-        {
-            var kb = Object.FindAnyObjectByType<KeyboardController>();
-            if (kb != null)
-            {
-                kb.ClearKeyboard();
-                UnityEditor.EditorUtility.SetDirty(kb.gameObject);
-                UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(kb.gameObject.scene);
-            }
-        }
-#endif
 
         private void Awake()
         {
@@ -243,13 +173,6 @@ namespace TapInstinct.UI
         [ContextMenu("Generate Keyboard")]
         public void GenerateKeyboard()
         {
-#if UNITY_EDITOR
-            if (keyPrefab == null || rows == null || rows.Length == 0 || promptController == null)
-            {
-                AutoAssignReferences();
-            }
-#endif
-
             if (keyPrefab == null)
             {
                 Debug.LogError("[KeyboardController] KeyPrefab is not assigned in the Inspector!");
@@ -351,12 +274,16 @@ namespace TapInstinct.UI
         // =========================================================================
         public void OnPointerDown(PointerEventData eventData)
         {
+            if(!interactable) return;
+
             // Tapped on the keyboard area or background (missed keys or tapped between keys)
             HandleTapAtPosition(eventData.position, null, "Fallback");
         }
 
         private void OnKeyButtonClicked(RectTransform clickedKeyRt, string keyLabel)
         {
+            if (!interactable) return;
+
             // Ignore non-character function keys (Shift, Enter, etc.)
             if (keyLabel == "Shift" || keyLabel == "Del" || keyLabel == "!#1" || keyLabel == "Enter")
             {
@@ -379,34 +306,6 @@ namespace TapInstinct.UI
             // Pass the exact pixel coordinates of the touch AND the target key for accuracy calculation
             HandleTapAtPosition(exactScreenPos, clickedKeyRt, keyLabel);
         }
-
-        //private void OnKeyButtonClicked(RectTransform clickedKeyRt, string keyLabel)
-        //{
-        //    // Ignore non-character function keys
-        //    if (keyLabel == "Shift" || keyLabel == "Del" || keyLabel == "!#1" || keyLabel == "Enter")
-        //    {
-        //        return;
-        //    }
-
-        //    // Flash tapped key briefly if keys are hidden
-        //    if (isHidden && clickedKeyRt != null)
-        //    {
-        //        StartCoroutine(FlashKeyRoutine(clickedKeyRt.gameObject));
-        //    }
-
-        //    Vector2 screenPos;
-        //    Camera cam = (cachedCanvas != null && cachedCanvas.renderMode != RenderMode.ScreenSpaceOverlay) ? cachedCanvas.worldCamera : null;
-        //    if (clickedKeyRt != null)
-        //    {
-        //        screenPos = RectTransformUtility.WorldToScreenPoint(cam, clickedKeyRt.position);
-        //    }
-        //    else
-        //    {
-        //        screenPos = Vector2.zero;
-        //    }
-
-        //    HandleTapAtPosition(screenPos, clickedKeyRt, keyLabel);
-        //}
 
 
         private void HandleTapAtPosition(Vector2 screenPos, RectTransform tappedKeyRt, string sourceLabel)
@@ -503,9 +402,36 @@ namespace TapInstinct.UI
             }
         }
 
-        // =========================================================================
+        public void ResetState()
+        {
+            ambientAlphaMultiplier = 0f;
+            isHidden = false;
+            interactable = false;
+
+            var graphics = GetAllKeyGraphics();
+
+            foreach (var g in graphics)
+            {
+                if (g == null) continue;
+                Color c = g.color;
+                c.a = 1f;
+                g.color = c;
+            }
+
+            if (ambientGlowImage != null)
+            {
+                Color c = currentGlowColor;
+                c.a = 0f;
+                ambientGlowImage.color = c;
+            }
+
+            if (revealCanvasGroup != null)
+            {
+                revealCanvasGroup.alpha = 0f;
+            }
+        }
+
         // Reveal & Fade Routines
-        // =========================================================================
         public void FadeOut()
         {
             isHidden = true;
@@ -588,16 +514,10 @@ namespace TapInstinct.UI
         private System.Collections.IEnumerator FadeRoutine(float targetKeyAlpha, float targetGlowAlpha)
         {
             // Collect all Graphic components (Image + TMP) across all rows.
-            // We animate color.a directly — NOT via Row CanvasGroup alpha, which would prevent
-            // individual key flash from working (parent CG alpha=0 blocks all child rendering).
             var graphics = GetAllKeyGraphics();
             float startKeyAlpha = graphics.Count > 0 ? graphics[0].color.a : (targetKeyAlpha > 0.5f ? 0f : 1f);
             float startGlowAlpha = ambientAlphaMultiplier;
             float elapsed = 0f;
-
-            // Disable input immediately when fading out
-            //if (targetKeyAlpha < 0.5f)
-            //    SetRowInteractivity(false);
 
             while (elapsed < fadeDuration)
             {
@@ -664,9 +584,7 @@ namespace TapInstinct.UI
             }
         }
 
-        // =========================================================================
-        // Layout Definition (Samsung One UI QWERTZ)
-        // =========================================================================
+        // Layout Definition
         private List<List<KeyData>> GetDefaultQwertzLayout()
         {
             return new List<List<KeyData>>
@@ -700,7 +618,7 @@ namespace TapInstinct.UI
                     new() { label = "P", flexibleWidth = 1f },
                     new() { label = "Ü", flexibleWidth = 1f },
                 },
-                // Row 2: Home letter row
+                // Row 2: Middle letter row
                 new()
                 {
                     new() { label = "A", flexibleWidth = 1f },

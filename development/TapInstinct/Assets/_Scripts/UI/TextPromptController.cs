@@ -10,13 +10,13 @@ namespace TapInstinct.UI
 
         [Header("Colors & Styling")]
         [SerializeField] private Color typedColor = Color.white;
-        [SerializeField] private Color untypedColor = new Color(0.33f, 0.35f, 0.40f, 1f); // Muted gray #555866
-        [SerializeField] private Color activeCharColor = new Color(0.49f, 0.66f, 1f, 1f);  // Accent blue #7DA8FF
+        [SerializeField] private Color untypedColor = new Color(0.33f, 0.35f, 0.40f, 1f); // Muted gray
+        [SerializeField] private Color activeCharColor = new Color(0.49f, 0.66f, 1f, 1f);  // Accent blue
         [SerializeField] private bool underlineActiveChar = true;
 
         [Header("Gameplay Data")]
         [TextArea(2, 4)]
-        [SerializeField] private string targetText = "Hallo, wie geht es dir.";
+        [SerializeField] private string targetText = "new targetText";
 
         [SerializeField] private int currentIndex = 0;
 

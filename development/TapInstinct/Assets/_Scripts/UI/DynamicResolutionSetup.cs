@@ -7,7 +7,7 @@ namespace TapInstinct.UI
     public class DynamicResolutionSetup : MonoBehaviour
     {
         [Header("Camera & UI References")]
-        [Tooltip("The camera that renders your main UI (e.g. Main Camera)")]
+        [Tooltip("The camera that renders main UI (e.g. Main Camera)")]
         public Camera uiCamera;
 
         [Tooltip("The RawImage component inside the KeyboardWaveMask")]

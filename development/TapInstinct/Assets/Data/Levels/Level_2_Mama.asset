@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0215645f8ce38d9488fdaf149b8e2ade, type: 3}
+  m_Name: Level_2_Mama
+  m_EditorClassIdentifier: Assembly-CSharp::TapInstinct.Core.LevelDataSO
+  levelId: level_mama
+  contactName: Mama
+  avatarInitial: M
+  avatarColor:
+    serializedVersion: 2
+    rgba: 4286077670
+  statusOrBio: Vergiss bitte nicht die Einkaeufe!
+  isUnlocked: 0
+  requiredAccuracy: 80
+  steps:
+  - npcMessage: Hallo Schatz, denkst du bitte an die Milch?
+    npcDelay: 1.2
+    playerTargetPrompt: Alles klar, bringe ich mit.
+    timeLimit: 0
+  - npcMessage: Und bitte auch Brot vom Baecker.
+    npcDelay: 1
+    playerTargetPrompt: Geht klar, bis spaeter.
+    timeLimit: 0

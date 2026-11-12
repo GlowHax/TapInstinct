@@ -9,14 +9,13 @@ namespace TapInstinct.UI
         [SerializeField] private int totalTaps = 0;
         [SerializeField] private float totalAccuracySum = 0f;
 
-        // Lifetime average accuracy: Starts at 100%
+        // Lifetime average accuracy
         public float OverallAccuracy => totalTaps == 0 ? 0f : (totalAccuracySum / totalTaps) * 100f;
         public int OverallAccuracyInt => Mathf.Clamp(Mathf.RoundToInt(OverallAccuracy), 0, 100);
 
         // Normalized score 0.0 to 1.0 (for ambient color lerping)
         public float OverallScore => OverallAccuracy / 100f;
 
-        public event System.Action<float> OnAccuracyUpdated;
 
         /// <summary>
         /// Registers a tap and computes accuracy based on distance to the target key.
@@ -33,7 +32,6 @@ namespace TapInstinct.UI
             totalTaps++;
             totalAccuracySum += tapScore;
 
-            OnAccuracyUpdated?.Invoke(OverallAccuracy);
             return tapScore;
         }
 
@@ -99,11 +97,17 @@ namespace TapInstinct.UI
             return Mathf.Clamp01(score);
         }
 
+        public void ApplyTimerPenalty()
+        {
+            // Deduct 25% from overall accuracy
+            totalAccuracySum -= 0.25f * totalTaps;
+            totalAccuracySum = Mathf.Max(0f, totalAccuracySum);
+        }
+
         public void ResetAll()
         {
             totalTaps = 0;
             totalAccuracySum = 0f;
-            OnAccuracyUpdated?.Invoke(100f);
         }
     }
 }
