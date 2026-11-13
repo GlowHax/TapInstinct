@@ -149,7 +149,7 @@ namespace TapInstinct.UI
 
             TextMeshProUGUI nText = nameObj.GetComponent<TextMeshProUGUI>();
             if (fontAsset != null) nText.font = fontAsset;
-            nText.text = data.contactName + (isUnlocked ? "" : " (nicht freigeschaltet)");
+            nText.text = data.contactName + (isUnlocked ? "" : " [nicht freigeschaltet]");
             nText.fontSize = 49;
             nText.fontStyle = FontStyles.Bold;
             nText.alignment = TextAlignmentOptions.MidlineLeft;

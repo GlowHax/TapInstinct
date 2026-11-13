@@ -76,16 +76,6 @@ namespace TapInstinct.UI
                 sendButton.onClick.AddListener(OnSendClicked);
             }
 
-            if (backButton != null && GameManager.Instance != null)
-            {
-                backButton.onClick.AddListener(() =>
-                {
-                    StopAllDialogueAndTimers();
-                    ClearChatContent();
-                    GameManager.Instance.SetState(GameState.LevelSelection);
-                });
-            }
-
             if (backToLevelsButton != null && GameManager.Instance != null)
             {
                 backToLevelsButton.onClick.AddListener (() =>
@@ -107,6 +97,7 @@ namespace TapInstinct.UI
             {
                 promptController.OnProgressChanged += OnProgressChanged;
             }
+
             InitializeCurrentMode();
         }
 
@@ -135,11 +126,30 @@ namespace TapInstinct.UI
 
             if (IsLevelMode)
             {
+                if (backButton != null && GameManager.Instance != null)
+                {
+                    backButton.onClick.AddListener(() =>
+                    {
+                        StopAllDialogueAndTimers();
+                        ClearChatContent();
+                        GameManager.Instance.SetState(GameState.LevelSelection);
+                    });
+                }
+
                 currentStepIndex = 0;
                 StartLevelDialogue();
             }
             else
             {
+                if (backButton != null && GameManager.Instance != null)
+                {
+                    backButton.onClick.AddListener(() =>
+                    {
+                        StopAllDialogueAndTimers();
+                        ClearChatContent();
+                        GameManager.Instance.SetState(GameState.MainMenu);
+                    });
+                }
                 accuracyTracker.ResetAll();
                 SetRandomNextSentence();
             }
@@ -247,22 +257,25 @@ namespace TapInstinct.UI
 
             if (IsLevelMode)
             {
-                LevelDataSO currentLevel = LevelManager.Instance != null ? LevelManager.Instance.CurrentLevel : null;
-                currentStepIndex++;
+                if (accuracyTracker == null || LevelManager.Instance == null) return;
 
-                if (currentLevel != null && currentStepIndex < currentLevel.steps.Count)
+                LevelDataSO currentLevel = LevelManager.Instance.CurrentLevel;
+                if(currentLevel == null) return;
+
+                currentStepIndex++;
+                int finalAccuracy = accuracyTracker.OverallAccuracyInt;
+
+                if (currentStepIndex < currentLevel.steps.Count)
                 {
                     // Proceed to next dialogue step
                     promptController.SetTargetText(string.Empty);
                     UpdateSendButtonState();
                     activeDialogueRoutine = StartCoroutine(ExecuteDialogueStepRoutine(currentLevel.steps[currentStepIndex]));
                 }
-                else if(accuracyTracker.OverallAccuracyInt >= currentLevel.requiredAccuracy)
+                else if(finalAccuracy >= currentLevel.requiredAccuracy)
                 {
-                    if (LevelManager.Instance != null)
-                    {
-                        LevelManager.Instance.UnlockNextLevel();
-                    }
+                    LevelManager.Instance.UnlockNextLevel();
+                    LevelManager.Instance.TrySaveHighscore(currentLevel.levelId, finalAccuracy);
 
                     // Level finished!
                     promptController.SetTargetText(string.Empty);
@@ -271,10 +284,13 @@ namespace TapInstinct.UI
                     levelCompletedTitle.text = "Level abgeschlossen!";
                     levelCompletedInfoTxt.text = 
                         $"Genauigkeit: {accuracyTracker.OverallAccuracyInt}%\n" +
-                        $"Highscore: -";
+                        $"Highscore: {LevelManager.Instance.GetLevelHighscore(currentLevel.levelId)}%";
+
                 }
                 else
                 {
+                    LevelManager.Instance.TrySaveHighscore(currentLevel.levelId, finalAccuracy);
+
                     // Level failed
                     promptController.SetTargetText(string.Empty);
                     UpdateSendButtonState();
@@ -282,7 +298,7 @@ namespace TapInstinct.UI
                     levelCompletedTitle.text = "Level fehlgeschlagen!";
                     levelCompletedInfoTxt.text =
                         $"Genauigkeit: {accuracyTracker.OverallAccuracyInt}%/{currentLevel.requiredAccuracy}%\n" +
-                        $"Highscore: -";
+                        $"Highscore: {LevelManager.Instance.GetLevelHighscore(currentLevel.levelId)}%";
                 }
             }
             else
@@ -404,7 +420,9 @@ namespace TapInstinct.UI
             var tmp = textObj.GetComponent<TextMeshProUGUI>();
             if (fontAsset != null) tmp.font = fontAsset;
             tmp.text = message;
-            tmp.fontSize = 32;
+            tmp.enableAutoSizing = true;
+            tmp.fontSizeMin = 18;
+            tmp.fontSizeMax = 45;
             tmp.color = isPlayer ? bubbleTextColor : npcBubbleTextColor;
             tmp.textWrappingMode = TextWrappingModes.Normal;
             tmp.alignment = TextAlignmentOptions.MidlineLeft;

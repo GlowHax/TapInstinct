@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace TapInstinct.Core
 {
@@ -23,6 +25,29 @@ namespace TapInstinct.Core
                 return;
             }
             Instance = this;
+        }
+
+        public bool TrySaveHighscore(string levelId, int newAccuracy)
+        {
+            string key = "Highscore_" + levelId;
+            int currentHighscore = PlayerPrefs.GetInt(key, 0);
+
+            if (newAccuracy > currentHighscore)
+            {
+                PlayerPrefs.SetInt(key, newAccuracy);
+                PlayerPrefs.Save();
+                return true;
+            }
+
+            return false;
+        }
+
+        public int GetLevelHighscore(string levelId)
+        {
+            string key = "Highscore_" + levelId;
+            return PlayerPrefs.GetInt(key, 0);
+
+            
         }
 
         public bool IsLevelUnlocked(int index)

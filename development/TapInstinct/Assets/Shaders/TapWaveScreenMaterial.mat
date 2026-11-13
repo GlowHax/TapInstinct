@@ -80,7 +80,7 @@ Material:
     - _QueueOffset: 0
     - _SampleGI: 0
     - _ShockWaveStrength: -0.1
-    - _Size: 0.05
+    - _Size: 0.02
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0

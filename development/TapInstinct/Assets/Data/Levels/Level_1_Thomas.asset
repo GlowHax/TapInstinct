@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0215645f8ce38d9488fdaf149b8e2ade, type: 3}
+  m_Name: Level_1_Thomas
+  m_EditorClassIdentifier: Assembly-CSharp::TapInstinct.Core.LevelDataSO
+  levelId: level_thomas
+  contactName: Thomas (Mitbewohner)
+  avatarInitial: T
+  avatarColor:
+    serializedVersion: 2
+    rgba: 4288893440
+  statusOrBio: Serienmarathon
+  isUnlocked: 1
+  requiredAccuracy: 75
+  steps:
+  - npcMessage: 'Hey, wollen wir heute Abend die Serie
+
+      zu Ende schauen? '
+    npcDelay: 1.6
+    playerTargetPrompt: 'Ich gehe schon zu einer Geburtstagsfeier
+
+      nach der Arbeit.'
+    timeLimit: 0
+  - npcMessage: "Ok. Kannst du mir das Netflix Passwort geben?\nIch w\xFCrde dann etwas anderes schauen."
+    npcDelay: 2
+    playerTargetPrompt: gitspsswo123
+    timeLimit: 0
+  - npcMessage: geht nicht...
+    npcDelay: 1
+    playerTargetPrompt: 'gutespasswort123 hab mich vertippt.
+
+      Handytastatur ist  irgendwie schrott'
+    timeLimit: 0
+  - npcMessage: "Hmm ok hat geklappt danke. Viel Spa\xDF\nauf der Feier sp\xE4ter!"
+    npcDelay: 1.9
+    playerTargetPrompt: danke
+    timeLimit: 0

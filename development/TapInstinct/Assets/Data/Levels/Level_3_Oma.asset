@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0215645f8ce38d9488fdaf149b8e2ade, type: 3}
+  m_Name: Level_3_Oma
+  m_EditorClassIdentifier: Assembly-CSharp::TapInstinct.Core.LevelDataSO
+  levelId: level_oma
+  contactName: Oma
+  avatarInitial: O
+  avatarColor:
+    serializedVersion: 2
+    rgba: 4290388312
+  statusOrBio: Der Fernseher geht nicht
+  isUnlocked: 0
+  requiredAccuracy: 85
+  steps:
+  - npcMessage: 'Mein Schatz, ich wollte Fernsehen schauen
+
+      aber der Bildschirm geht nicht an, kannst
+
+      du mir nochmal sagen wie das geht?'
+    npcDelay: 2
+    playerTargetPrompt: Die rote Paste auf der rechten Seite
+    timeLimit: 0
+  - npcMessage: "Paste? Meinst du den runden knopf?\nDa steht HDMI 1. Soll ich da draufdr\xFCcken? "
+    npcDelay: 3
+    playerTargetPrompt: 'Ja den meine ich. Meine Tastatur auf dem
+
+      Handy funktioniert nicht richtig. '
+    timeLimit: 0
+  - npcMessage: 'Jetzt ist das Bild blau und es summt. '
+    npcDelay: 1.5
+    playerTargetPrompt: 'Dann steck einmal das Kabel ab und wieder rein. '
+    timeLimit: 0
+  - npcMessage: "Es l\xE4uft! Danke dir. Wenn du mich das n\xE4chste Mal besuchen kommst, backe ich dir einen sch\xF6nen Kuchen! "
+    npcDelay: 1.5
+    playerTargetPrompt: 'Gerne doch, freut mich zu hoeren. Richte Opa viele Gruesse von mir aus. '
+    timeLimit: 0

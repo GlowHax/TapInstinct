@@ -6,7 +6,6 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager Instance { get; private set; }
 
-
     [Header("Menu Panels")]
     [SerializeField] private GameObject mainMenu;
     [SerializeField] private GameObject levelSelect;
