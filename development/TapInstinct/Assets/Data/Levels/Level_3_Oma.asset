@@ -20,7 +20,7 @@ MonoBehaviour:
     rgba: 4290388312
   statusOrBio: Der Fernseher geht nicht
   isUnlocked: 0
-  requiredAccuracy: 85
+  requiredAccuracy: 90
   steps:
   - npcMessage: 'Mein Schatz, ich wollte Fernsehen schauen
 

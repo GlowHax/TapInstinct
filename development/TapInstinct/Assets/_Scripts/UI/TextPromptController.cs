@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using TMPro;
 
 public class TextPromptController : MonoBehaviour
@@ -73,21 +73,21 @@ public class TextPromptController : MonoBehaviour
         string untypedHex = ColorUtility.ToHtmlStringRGBA(untypedColor);
         string activeHex = ColorUtility.ToHtmlStringRGBA(activeCharColor);
 
-        // 1. Text already typed
+        // Text already typed
         string typedPart = targetText.Substring(0, currentIndex);
 
         if (currentIndex < targetText.Length)
         {
-            // 2. The next active character to type
+            // The next active character to type
             char activeChar = targetText[currentIndex];
             string formattedActive = underlineActiveChar
                 ? $"<u>{activeChar}</u>"
                 : activeChar.ToString();
 
-            // 3. Remaining ghost text
+            // Remaining ghost text
             string remainingPart = targetText.Substring(currentIndex + 1);
 
-            // Combine all three sections
+            // all three sections
             promptText.text = $"<color=#{typedHex}>{typedPart}</color>" +
                               $"<color=#{activeHex}>{formattedActive}</color>" +
                               $"<color=#{untypedHex}>{remainingPart}</color>";
@@ -100,18 +100,4 @@ public class TextPromptController : MonoBehaviour
 
         OnProgressChanged?.Invoke();
     }
-
-#if UNITY_EDITOR
-    [ContextMenu("Test: Type Next Char")]
-    public void TestTypeNextChar()
-    {
-        AdvanceText();
-    }
-
-    [ContextMenu("Test: Reset Progress")]
-    public void TestResetProgress()
-    {
-        ResetProgress();
-    }
-#endif
 }

@@ -20,7 +20,7 @@ MonoBehaviour:
     rgba: 4288893440
   statusOrBio: Serienmarathon
   isUnlocked: 1
-  requiredAccuracy: 75
+  requiredAccuracy: 70
   steps:
   - npcMessage: 'Hey, wollen wir heute Abend die Serie
 

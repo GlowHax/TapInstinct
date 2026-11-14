@@ -4,10 +4,13 @@ public class AccuracyTracker : MonoBehaviour
 {
     [Header("State")]
     [SerializeField] private int totalTaps = 0;
+    [SerializeField] private float totalWeight = 0f;
     [SerializeField] private float totalAccuracySum = 0f;
 
+    public int TotalTaps => totalTaps;
+
     // Lifetime average accuracy
-    public float OverallAccuracy => totalTaps == 0 ? 0f : (totalAccuracySum / totalTaps) * 100f;
+    public float OverallAccuracy => totalTaps == 0 ? 0f : (totalAccuracySum / totalWeight) * 100f;
     public int OverallAccuracyInt => Mathf.Clamp(Mathf.RoundToInt(OverallAccuracy), 0, 100);
 
     // Normalized score 0.0 to 1.0 (for ambient color lerping)
@@ -25,7 +28,11 @@ public class AccuracyTracker : MonoBehaviour
     {
         float tapScore = CalculateTapScore(tapScreenPosition, targetKeyRect);
 
+        //misses are weighted more for added difficulty
+        float weight = tapScore < 1.0f ? 1.3f : 1f;
+
         totalTaps++;
+        totalWeight += weight;
         totalAccuracySum += tapScore;
 
         return tapScore;
@@ -56,7 +63,6 @@ public class AccuracyTracker : MonoBehaviour
 
         float keyWidth = Mathf.Max(1f, maxX - minX);
         float keyHeight = Mathf.Max(1f, maxY - minY);
-        // Average dimension of a single key on this screen
         float keySize = (keyWidth + keyHeight) * 0.5f;
 
         // Check if touch is inside the key rect
@@ -77,19 +83,19 @@ public class AccuracyTracker : MonoBehaviour
 
         float edgeDistancePx = Mathf.Sqrt(dx * dx + dy * dy);
 
-        // Normalize distance: in units of key size (resolution-independent!)
+        // Normalize distance: in units of key size
         // e.g. 0.5 = half a key width away, 1.0 = one key width away
         float normalizedDist = edgeDistancePx / keySize;
 
-        // Non-linear falloff curve:
+        // falloff curve:
         // Minimal penalty for being just slightly outside the border (up to 0.2 key size).
         // Drops off superlinearly / steeper as distance grows.
         // When normalizedDist >= 2.0 (more than 2 keys away), accuracy approaches 0.
-        float maxDropDist = 2.0f;
+        float maxDropDist = 1.1f;
         float t = Mathf.Clamp01(normalizedDist / maxDropDist);
 
-        // Non-linear decay: (1 - t^1.5) so slight misses retain ~85-95%, while far misses plummet
-        float score = 1.0f - Mathf.Pow(t, 1.5f);
+        // Non-linear decay: (1 - t^1.75) so slight misses retain ~85-95%, while far misses plummet
+        float score = 1.0f - Mathf.Pow(t, 1.75f);
         return Mathf.Clamp01(score);
     }
 
@@ -104,5 +110,6 @@ public class AccuracyTracker : MonoBehaviour
     {
         totalTaps = 0;
         totalAccuracySum = 0f;
+        totalWeight = 0f;
     }
 }

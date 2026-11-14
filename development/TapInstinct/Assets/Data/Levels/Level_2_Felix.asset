@@ -20,7 +20,7 @@ MonoBehaviour:
     rgba: 4282101718
   statusOrBio: "mitten in einer Pr\xFCfung..."
   isUnlocked: 0
-  requiredAccuracy: 85
+  requiredAccuracy: 80
   steps:
   - npcMessage: 'Hey! Er ist gerade Abgelenkt, was hast du bei
 

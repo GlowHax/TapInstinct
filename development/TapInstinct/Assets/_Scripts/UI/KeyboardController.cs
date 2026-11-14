@@ -132,6 +132,11 @@ public class KeyboardController : MonoBehaviour, IPointerDownHandler
                     {
                         keyMap[' '] = rt;
                     }
+                    else if (label.Equals("Enter", System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        keyMap['\n'] = rt;
+                        keyMap['\r'] = rt;
+                    }
                     else if (label.Length == 1)
                     {
                         char lower = char.ToLowerInvariant(label[0]);
@@ -165,9 +170,7 @@ public class KeyboardController : MonoBehaviour, IPointerDownHandler
         }
     }
 
-    // =========================================================================
     // Keyboard Generation
-    // =========================================================================
     [ContextMenu("Generate Keyboard")]
     public void GenerateKeyboard()
     {
@@ -267,14 +270,12 @@ public class KeyboardController : MonoBehaviour, IPointerDownHandler
         }
     }
 
-    // =========================================================================
     // Input Handling & Accuracy
-    // =========================================================================
     public void OnPointerDown(PointerEventData eventData)
     {
         if (!interactable) return;
 
-        // Tapped on the keyboard area or background (missed keys or tapped between keys)
+        // Tapped on the keyboard area or background (tapped between keys)
         HandleTapAtPosition(eventData.position, null, "Fallback");
     }
 
@@ -282,8 +283,8 @@ public class KeyboardController : MonoBehaviour, IPointerDownHandler
     {
         if (!interactable) return;
 
-        // Ignore non-character function keys (Shift, Enter, etc.)
-        if (keyLabel == "Shift" || keyLabel == "Del" || keyLabel == "!#1" || keyLabel == "Enter")
+        // Ignore non-character function keys (Shift, etc.)
+        if (keyLabel == "Shift" || keyLabel == "Del" || keyLabel == "!#1")
         {
             return;
         }
@@ -308,7 +309,7 @@ public class KeyboardController : MonoBehaviour, IPointerDownHandler
 
     private void HandleTapAtPosition(Vector2 screenPos, RectTransform tappedKeyRt, string sourceLabel)
     {
-        if (sourceLabel == "Shift" || sourceLabel == "Del" || sourceLabel == "!#1" || sourceLabel == "Enter")
+        if (sourceLabel == "Shift" || sourceLabel == "Del" || sourceLabel == "!#1")
         {
             return;
         }
@@ -329,8 +330,6 @@ public class KeyboardController : MonoBehaviour, IPointerDownHandler
         {
             char targetChar = promptController.CurrentTargetChar;
             RectTransform targetKeyRect = null;
-            if (keyMap.Count == 0) BuildKeyMap();
-
             keyMap.TryGetValue(targetChar, out targetKeyRect);
 
             if (accuracyTracker != null)
@@ -579,7 +578,7 @@ public class KeyboardController : MonoBehaviour, IPointerDownHandler
             if (row == null) continue;
             var cg = row.GetComponent<CanvasGroup>();
             if (cg == null) cg = row.gameObject.AddComponent<CanvasGroup>();
-            cg.alpha = 1f; // Never change — changing this blocks all child rendering!
+            cg.alpha = 1f;
             cg.interactable = interactable;
             cg.blocksRaycasts = interactable;
         }
@@ -589,75 +588,75 @@ public class KeyboardController : MonoBehaviour, IPointerDownHandler
     private List<List<KeyData>> GetDefaultQwertzLayout()
     {
         return new List<List<KeyData>>
+        {
+            // Row 0: Number row
+            new()
             {
-                // Row 0: Number row
-                new()
-                {
-                    new() { label = "1", flexibleWidth = 1f },
-                    new() { label = "2", flexibleWidth = 1f },
-                    new() { label = "3", flexibleWidth = 1f },
-                    new() { label = "4", flexibleWidth = 1f },
-                    new() { label = "5", flexibleWidth = 1f },
-                    new() { label = "6", flexibleWidth = 1f },
-                    new() { label = "7", flexibleWidth = 1f },
-                    new() { label = "8", flexibleWidth = 1f },
-                    new() { label = "9", flexibleWidth = 1f },
-                    new() { label = "0", flexibleWidth = 1f },
-                },
-                // Row 1: Top letter row
-                new()
-                {
-                    new() { label = "Q", flexibleWidth = 1f },
-                    new() { label = "W", flexibleWidth = 1f },
-                    new() { label = "E", flexibleWidth = 1f },
-                    new() { label = "R", flexibleWidth = 1f },
-                    new() { label = "T", flexibleWidth = 1f },
-                    new() { label = "Z", flexibleWidth = 1f },
-                    new() { label = "U", flexibleWidth = 1f },
-                    new() { label = "I", flexibleWidth = 1f },
-                    new() { label = "O", flexibleWidth = 1f },
-                    new() { label = "P", flexibleWidth = 1f },
-                    new() { label = "Ü", flexibleWidth = 1f },
-                },
-                // Row 2: Middle letter row
-                new()
-                {
-                    new() { label = "A", flexibleWidth = 1f },
-                    new() { label = "S", flexibleWidth = 1f },
-                    new() { label = "D", flexibleWidth = 1f },
-                    new() { label = "F", flexibleWidth = 1f },
-                    new() { label = "G", flexibleWidth = 1f },
-                    new() { label = "H", flexibleWidth = 1f },
-                    new() { label = "J", flexibleWidth = 1f },
-                    new() { label = "K", flexibleWidth = 1f },
-                    new() { label = "L", flexibleWidth = 1f },
-                    new() { label = "Ö", flexibleWidth = 1f },
-                    new() { label = "Ä", flexibleWidth = 1f },
-                },
-                // Row 3: Bottom letter row with Shift, Spacers, Del
-                new()
-                {
-                    new() { label = "Shift", flexibleWidth = 1.2f, isSpecial = true },
-                    new() { flexibleWidth = 0.8f, isSpacer = true },
-                    new() { label = "Y", flexibleWidth = 1f },
-                    new() { label = "X", flexibleWidth = 1f },
-                    new() { label = "C", flexibleWidth = 1f },
-                    new() { label = "V", flexibleWidth = 1f },
-                    new() { label = "B", flexibleWidth = 1f },
-                    new() { label = "N", flexibleWidth = 1f },
-                    new() { label = "M", flexibleWidth = 1f },
-                    new() { flexibleWidth = 0.8f, isSpacer = true },
-                    new() { label = "Del", flexibleWidth = 1.2f, isSpecial = true },
-                },
-                // Row 4: Bottom utility row (Symbols, Comma, Space, Dot, Enter)
-                new()
-                {
-                    new() { label = "!#1", flexibleWidth = 1.3f, isSpecial = true },
-                    new() { label = ",", flexibleWidth = 1f },
-                    new() { label = "Space", flexibleWidth = 6.4f },
-                    new() { label = ".", flexibleWidth = 1f },
-                    new() { label = "Enter", flexibleWidth = 1.3f, isSpecial = true },
-                }
-            };
+                new() { label = "1", flexibleWidth = 1f },
+                new() { label = "2", flexibleWidth = 1f },
+                new() { label = "3", flexibleWidth = 1f },
+                new() { label = "4", flexibleWidth = 1f },
+                new() { label = "5", flexibleWidth = 1f },
+                new() { label = "6", flexibleWidth = 1f },
+                new() { label = "7", flexibleWidth = 1f },
+                new() { label = "8", flexibleWidth = 1f },
+                new() { label = "9", flexibleWidth = 1f },
+                new() { label = "0", flexibleWidth = 1f },
+            },
+            // Row 1: Top letter row
+            new()
+            {
+                new() { label = "Q", flexibleWidth = 1f },
+                new() { label = "W", flexibleWidth = 1f },
+                new() { label = "E", flexibleWidth = 1f },
+                new() { label = "R", flexibleWidth = 1f },
+                new() { label = "T", flexibleWidth = 1f },
+                new() { label = "Z", flexibleWidth = 1f },
+                new() { label = "U", flexibleWidth = 1f },
+                new() { label = "I", flexibleWidth = 1f },
+                new() { label = "O", flexibleWidth = 1f },
+                new() { label = "P", flexibleWidth = 1f },
+                new() { label = "Ü", flexibleWidth = 1f },
+            },
+            // Row 2: Middle letter row
+            new()
+            {
+                new() { label = "A", flexibleWidth = 1f },
+                new() { label = "S", flexibleWidth = 1f },
+                new() { label = "D", flexibleWidth = 1f },
+                new() { label = "F", flexibleWidth = 1f },
+                new() { label = "G", flexibleWidth = 1f },
+                new() { label = "H", flexibleWidth = 1f },
+                new() { label = "J", flexibleWidth = 1f },
+                new() { label = "K", flexibleWidth = 1f },
+                new() { label = "L", flexibleWidth = 1f },
+                new() { label = "Ö", flexibleWidth = 1f },
+                new() { label = "Ä", flexibleWidth = 1f },
+            },
+            // Row 3: Bottom letter row with Shift, Spacers, Del
+            new()
+            {
+                new() { label = "Shift", flexibleWidth = 1.2f, isSpecial = true },
+                new() { flexibleWidth = 0.8f, isSpacer = true },
+                new() { label = "Y", flexibleWidth = 1f },
+                new() { label = "X", flexibleWidth = 1f },
+                new() { label = "C", flexibleWidth = 1f },
+                new() { label = "V", flexibleWidth = 1f },
+                new() { label = "B", flexibleWidth = 1f },
+                new() { label = "N", flexibleWidth = 1f },
+                new() { label = "M", flexibleWidth = 1f },
+                new() { flexibleWidth = 0.8f, isSpacer = true },
+                new() { label = "Del", flexibleWidth = 1.2f, isSpecial = true },
+            },
+            // Row 4: Bottom utility row (Symbols, Comma, Space, Dot, Enter)
+            new()
+            {
+                new() { label = "!#1", flexibleWidth = 1.3f, isSpecial = true },
+                new() { label = ",", flexibleWidth = 1f },
+                new() { label = "Space", flexibleWidth = 6.4f },
+                new() { label = ".", flexibleWidth = 1f },
+                new() { label = "Enter", flexibleWidth = 1.3f, isSpecial = true },
+            }
+        };
     }
 }
