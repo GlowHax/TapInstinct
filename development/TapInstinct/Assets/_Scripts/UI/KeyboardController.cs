@@ -1,593 +1,594 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
-using TMPro;
+using UnityEngine.UI;
 
-namespace TapInstinct.UI
+public class KeyboardController : MonoBehaviour, IPointerDownHandler
 {
-    public class KeyboardController : MonoBehaviour, IPointerDownHandler
+    public bool interactable = false;
+
+    [Header("Prefab & Rows")]
+    [SerializeField] private GameObject keyPrefab;
+    [SerializeField] private RectTransform[] rows; // Row_0 to Row_4
+
+    [Header("Gameplay Connection")]
+    [SerializeField] private TextPromptController promptController;
+    [SerializeField] private AccuracyTracker accuracyTracker;
+
+    [Header("Colors")]
+    [SerializeField] private Color normalKeyColor = new Color32(37, 40, 55, 255);
+    [SerializeField] private Color specialKeyColor = new Color32(28, 30, 40, 255);
+    [SerializeField] private Color textColor = Color.white;
+
+    [Header("Appearance")]
+    [Tooltip("Scale multiplier for 9-sliced corner roundness")]
+    [SerializeField] private float keyCornerScale = 1.0f;
+
+    [Header("Fade Settings")]
+    [SerializeField] private CanvasGroup rowsCanvasGroup;
+    [SerializeField] private float fadeDuration = 0.3f;
+    private Coroutine activeFadeRoutine;
+    private bool isHidden = false;
+
+    [Header("Ambient Glow Background")]
+    [SerializeField] private Image ambientGlowImage;
+    [SerializeField] private Color highAccuracyColor = new Color(0.18f, 0.85f, 0.50f, 0.40f); // Green
+    [SerializeField] private Color midAccuracyColor = new Color(0.98f, 0.78f, 0.20f, 0.40f); // Yellow
+    [SerializeField] private Color lowAccuracyColor = new Color(0.95f, 0.32f, 0.25f, 0.40f); // Red
+    [SerializeField] private float glowLerpSpeed = 5.0f;
+    private Color targetGlowColor;
+    private Color currentGlowColor;
+    private float ambientAlphaMultiplier = 0f;
+
+    [Header("End-of-Sentence Reveal UI")]
+    [SerializeField] private CanvasGroup revealCanvasGroup;
+    [SerializeField] private TextMeshProUGUI revealAccuracyText;
+    private Coroutine activeRevealRoutine;
+
+    // Key map for accuracy distance calculation
+    private Dictionary<char, RectTransform> keyMap = new Dictionary<char, RectTransform>();
+    private Canvas cachedCanvas;
+
+    [System.Serializable]
+    public struct KeyData
     {
-        public bool interactable = false;
+        public string label;
+        public float flexibleWidth;
+        public bool isSpecial;
+        public bool isSpacer;
+    }
 
-        [Header("Prefab & Rows")]
-        [SerializeField] private GameObject keyPrefab;
-        [SerializeField] private RectTransform[] rows; // Row_0 to Row_4
-
-        [Header("Gameplay Connection")]
-        [SerializeField] private TextPromptController promptController;
-        [SerializeField] private AccuracyTracker accuracyTracker;
-
-        [Header("Colors")]
-        [SerializeField] private Color normalKeyColor = new Color32(37, 40, 55, 255);
-        [SerializeField] private Color specialKeyColor = new Color32(28, 30, 40, 255);
-        [SerializeField] private Color textColor = Color.white;
-
-        [Header("Appearance")]
-        [Tooltip("Scale multiplier for 9-sliced corner roundness")]
-        [SerializeField] private float keyCornerScale = 1.0f;
-
-        [Header("Fade Settings")]
-        [SerializeField] private CanvasGroup rowsCanvasGroup;
-        [SerializeField] private float fadeDuration = 0.3f;
-        private Coroutine activeFadeRoutine;
-        private bool isHidden = false;
-
-        [Header("Ambient Glow Background")]
-        [SerializeField] private Image ambientGlowImage;
-        [SerializeField] private Color highAccuracyColor = new Color(0.18f, 0.85f, 0.50f, 0.40f); // Vibrant Soft Emerald Green
-        [SerializeField] private Color midAccuracyColor  = new Color(0.98f, 0.78f, 0.20f, 0.40f); // Warm Amber
-        [SerializeField] private Color lowAccuracyColor  = new Color(0.95f, 0.32f, 0.25f, 0.40f); // Coral Red
-        [SerializeField] private float glowLerpSpeed = 5.0f;
-        private Color targetGlowColor;
-        private Color currentGlowColor;
-        private float ambientAlphaMultiplier = 0f; // Ambient glow stays 0 until keys fade out!
-
-        [Header("End-of-Sentence Reveal UI")]
-        [SerializeField] private CanvasGroup revealCanvasGroup;
-        [SerializeField] private TextMeshProUGUI revealAccuracyText;
-        private Coroutine activeRevealRoutine;
-
-        // Key map for accuracy distance calculation
-        private Dictionary<char, RectTransform> keyMap = new Dictionary<char, RectTransform>();
-        private Canvas cachedCanvas;
-
-        [System.Serializable]
-        public struct KeyData
+    private void Awake()
+    {
+        cachedCanvas = GetComponentInParent<Canvas>();
+        if (accuracyTracker == null)
         {
-            public string label;
-            public float flexibleWidth;
-            public bool isSpecial;
-            public bool isSpacer;
-        }
-
-        private void Awake()
-        {
-            cachedCanvas = GetComponentInParent<Canvas>();
+            accuracyTracker = GetComponent<AccuracyTracker>();
             if (accuracyTracker == null)
             {
-                accuracyTracker = GetComponent<AccuracyTracker>();
-                if (accuracyTracker == null)
-                {
-                    accuracyTracker = gameObject.AddComponent<AccuracyTracker>();
-                }
-            }
-
-            // If rows are empty (keys haven't been generated yet), auto-generate them!
-            bool needsGeneration = (rows == null || rows.Length == 0 || rows[0] == null || rows[0].childCount == 0);
-            if (needsGeneration)
-            {
-                GenerateKeyboard();
-            }
-            else
-            {
-                BuildKeyMap();
-                RebindKeyClickEvents();
-            }
-
-            targetGlowColor = highAccuracyColor;
-            currentGlowColor = highAccuracyColor;
-            ambientAlphaMultiplier = 0f; // Hidden initially while keys are visible!
-
-            if (ambientGlowImage != null)
-            {
-                Color c = currentGlowColor;
-                c.a = 0f;
-                ambientGlowImage.color = c;
-            }
-
-            if (revealCanvasGroup != null)
-            {
-                revealCanvasGroup.alpha = 0f;
+                accuracyTracker = gameObject.AddComponent<AccuracyTracker>();
             }
         }
 
-        private void Update()
+        // If rows are empty (keys haven't been generated yet), auto-generate them!
+        bool needsGeneration = (rows == null || rows.Length == 0 || rows[0] == null || rows[0].childCount == 0);
+        if (needsGeneration)
         {
-            // lerp for ambient background color
-            currentGlowColor = Color.Lerp(currentGlowColor, targetGlowColor, Time.deltaTime * glowLerpSpeed);
-            if (ambientGlowImage != null)
-            {
-                Color displayColor = currentGlowColor;
-                displayColor.a *= ambientAlphaMultiplier;
-                ambientGlowImage.color = displayColor;
-            }
+            GenerateKeyboard();
         }
-
-        public void BuildKeyMap()
+        else
         {
-            keyMap.Clear();
-            if (rows == null) return;
-
-            foreach (var row in rows)
-            {
-                if (row == null) continue;
-                for (int i = 0; i < row.childCount; i++)
-                {
-                    var child = row.GetChild(i);
-                    var tmp = child.GetComponentInChildren<TextMeshProUGUI>();
-                    if (tmp != null && !string.IsNullOrEmpty(tmp.text) && child.TryGetComponent<RectTransform>(out var rt))
-                    {
-                        string label = tmp.text.Trim();
-                        if (label.Equals("Space", System.StringComparison.OrdinalIgnoreCase))
-                        {
-                            keyMap[' '] = rt;
-                        }
-                        else if (label.Length == 1)
-                        {
-                            char lower = char.ToLowerInvariant(label[0]);
-                            char upper = char.ToUpperInvariant(label[0]);
-                            keyMap[lower] = rt;
-                            keyMap[upper] = rt;
-                        }
-                    }
-                }
-            }
-        }
-
-        public void RebindKeyClickEvents()
-        {
-            if (rows == null) return;
-            foreach (var row in rows)
-            {
-                if (row == null) continue;
-                for (int i = 0; i < row.childCount; i++)
-                {
-                    var child = row.GetChild(i);
-                    var btn = child.GetComponent<Button>();
-                    var tmp = child.GetComponentInChildren<TextMeshProUGUI>();
-                    if (btn != null && tmp != null && !string.IsNullOrEmpty(tmp.text))
-                    {
-                        string keyLabel = tmp.text.Trim();
-                        btn.onClick.RemoveAllListeners();
-                        btn.onClick.AddListener(() => OnKeyButtonClicked(child.GetComponent<RectTransform>(), keyLabel));
-                    }
-                }
-            }
-        }
-
-        // =========================================================================
-        // Keyboard Generation
-        // =========================================================================
-        [ContextMenu("Generate Keyboard")]
-        public void GenerateKeyboard()
-        {
-            if (keyPrefab == null)
-            {
-                Debug.LogError("[KeyboardController] KeyPrefab is not assigned in the Inspector!");
-                return;
-            }
-
-            ClearKeyboard();
-
-            var layout = GetDefaultQwertzLayout();
-
-            for (int r = 0; r < rows.Length && r < layout.Count; r++)
-            {
-                Transform rowParent = rows[r];
-                if (rowParent == null) continue;
-
-                foreach (var key in layout[r])
-                {
-                    CreateKey(key, rowParent);
-                }
-            }
-
             BuildKeyMap();
-            Debug.Log("[KeyboardController] Keyboard layout generated successfully!");
+            RebindKeyClickEvents();
         }
 
-        [ContextMenu("Clear Keyboard")]
-        public void ClearKeyboard()
-        {
-            if (rows == null) return;
+        targetGlowColor = highAccuracyColor;
+        currentGlowColor = highAccuracyColor;
+        ambientAlphaMultiplier = 0f; // Hidden initially while keys are visible!
 
-            foreach (var row in rows)
+        if (ambientGlowImage != null)
+        {
+            Color c = currentGlowColor;
+            c.a = 0f;
+            ambientGlowImage.color = c;
+        }
+
+        if (revealCanvasGroup != null)
+        {
+            revealCanvasGroup.alpha = 0f;
+        }
+    }
+
+    private void Update()
+    {
+        // lerp for ambient background color
+        currentGlowColor = Color.Lerp(currentGlowColor, targetGlowColor, Time.deltaTime * glowLerpSpeed);
+        if (ambientGlowImage != null)
+        {
+            Color displayColor = currentGlowColor;
+            displayColor.a *= ambientAlphaMultiplier;
+            ambientGlowImage.color = displayColor;
+        }
+    }
+
+    public void BuildKeyMap()
+    {
+        keyMap.Clear();
+        if (rows == null) return;
+
+        foreach (var row in rows)
+        {
+            if (row == null) continue;
+            for (int i = 0; i < row.childCount; i++)
             {
-                if (row == null) continue;
-                for (int i = row.childCount - 1; i >= 0; i--)
+                var child = row.GetChild(i);
+                var tmp = child.GetComponentInChildren<TextMeshProUGUI>();
+                if (tmp != null && !string.IsNullOrEmpty(tmp.text) && child.TryGetComponent<RectTransform>(out var rt))
                 {
-                    DestroyImmediate(row.GetChild(i).gameObject);
+                    string label = tmp.text.Trim();
+                    if (label.Equals("Space", System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        keyMap[' '] = rt;
+                    }
+                    else if (label.Length == 1)
+                    {
+                        char lower = char.ToLowerInvariant(label[0]);
+                        char upper = char.ToUpperInvariant(label[0]);
+                        keyMap[lower] = rt;
+                        keyMap[upper] = rt;
+                    }
                 }
             }
-            keyMap.Clear();
         }
+    }
 
-        private void CreateKey(KeyData key, Transform parent)
+    public void RebindKeyClickEvents()
+    {
+        if (rows == null) return;
+        foreach (var row in rows)
         {
-            if (key.isSpacer)
+            if (row == null) continue;
+            for (int i = 0; i < row.childCount; i++)
             {
-                GameObject spacerObj = new GameObject("Spacer", typeof(RectTransform), typeof(LayoutElement));
-                spacerObj.transform.SetParent(parent, false);
-                var spacerLayout = spacerObj.GetComponent<LayoutElement>();
-                spacerLayout.flexibleWidth = key.flexibleWidth;
-                return;
-            }
-
-            GameObject keyObj = Instantiate(keyPrefab, parent);
-            keyObj.name = $"Key_{key.label}";
-
-            // Ensure key has CanvasGroup for individual tap flash
-            if (keyObj.GetComponent<CanvasGroup>() == null)
-            {
-                keyObj.AddComponent<CanvasGroup>();
-            }
-
-            // 1. Set key label text
-            var tmp = keyObj.GetComponentInChildren<TextMeshProUGUI>();
-            if (tmp != null)
-            {
-                tmp.text = key.label;
-                tmp.color = textColor;
-            }
-
-            // 2. Set keycap background color and corner scaling
-            var img = keyObj.GetComponent<Image>();
-            if (img != null)
-            {
-                img.color = key.isSpecial ? specialKeyColor : normalKeyColor;
-                img.pixelsPerUnitMultiplier = keyCornerScale;
-            }
-
-            // 3. Set proportional width
-            var layoutElement = keyObj.GetComponent<LayoutElement>();
-            if (layoutElement != null)
-            {
-                layoutElement.minWidth = 0;
-                layoutElement.preferredWidth = 0;
-                layoutElement.flexibleWidth = key.flexibleWidth;
-            }
-
-            // 4. Hook up button click event
-            var btn = keyObj.GetComponent<Button>();
-            if (btn != null)
-            {
-                string keyLabel = key.label;
-                var keyRt = keyObj.GetComponent<RectTransform>();
-                btn.onClick.AddListener(() => OnKeyButtonClicked(keyRt, keyLabel));
-            }
-        }
-
-        // =========================================================================
-        // Input Handling & Accuracy
-        // =========================================================================
-        public void OnPointerDown(PointerEventData eventData)
-        {
-            if(!interactable) return;
-
-            // Tapped on the keyboard area or background (missed keys or tapped between keys)
-            HandleTapAtPosition(eventData.position, null, "Fallback");
-        }
-
-        private void OnKeyButtonClicked(RectTransform clickedKeyRt, string keyLabel)
-        {
-            if (!interactable) return;
-
-            // Ignore non-character function keys (Shift, Enter, etc.)
-            if (keyLabel == "Shift" || keyLabel == "Del" || keyLabel == "!#1" || keyLabel == "Enter")
-            {
-                return;
-            }
-
-            // Flash the tapped key briefly if the keyboard is currently hidden
-            if (isHidden && clickedKeyRt != null)
-            {
-                StartCoroutine(FlashKeyRoutine(clickedKeyRt.gameObject));
-            }
-
-            Vector2 exactScreenPos = Vector2.zero;
-
-            if (Pointer.current != null)
-            {
-                exactScreenPos = Pointer.current.position.ReadValue();
-            }
-
-            // Pass the exact pixel coordinates of the touch AND the target key for accuracy calculation
-            HandleTapAtPosition(exactScreenPos, clickedKeyRt, keyLabel);
-        }
-
-
-        private void HandleTapAtPosition(Vector2 screenPos, RectTransform tappedKeyRt, string sourceLabel)
-        {
-            if (sourceLabel == "Shift" || sourceLabel == "Del" || sourceLabel == "!#1" || sourceLabel == "Enter")
-            {
-                return;
-            }
-
-            // Fade out keys on first character tap
-            if (!isHidden)
-            {
-                FadeOut();
-            }
-
-            // 1. Calculate accuracy based on target char
-            if (promptController != null && !promptController.IsCompleted)
-            {
-                char targetChar = promptController.CurrentTargetChar;
-                RectTransform targetKeyRect = null;
-                if (keyMap.Count == 0) BuildKeyMap();
-
-                keyMap.TryGetValue(targetChar, out targetKeyRect);
-
-                Camera cam = (cachedCanvas != null && cachedCanvas.renderMode != RenderMode.ScreenSpaceOverlay) ? cachedCanvas.worldCamera : null;
-
-                if (accuracyTracker != null)
+                var child = row.GetChild(i);
+                var btn = child.GetComponent<Button>();
+                var tmp = child.GetComponentInChildren<TextMeshProUGUI>();
+                if (btn != null && tmp != null && !string.IsNullOrEmpty(tmp.text))
                 {
-                    accuracyTracker.RegisterTap(screenPos, targetKeyRect, cam);
-                    UpdateAmbientGlow(accuracyTracker.OverallScore);
+                    string keyLabel = tmp.text.Trim();
+                    btn.onClick.RemoveAllListeners();
+                    btn.onClick.AddListener(() => OnKeyButtonClicked(child.GetComponent<RectTransform>(), keyLabel));
                 }
+            }
+        }
+    }
 
-                promptController.AdvanceText();
+    // =========================================================================
+    // Keyboard Generation
+    // =========================================================================
+    [ContextMenu("Generate Keyboard")]
+    public void GenerateKeyboard()
+    {
+        if (keyPrefab == null)
+        {
+            Debug.LogError("[KeyboardController] KeyPrefab is not assigned in the Inspector!");
+            return;
+        }
+
+        ClearKeyboard();
+
+        var layout = GetDefaultQwertzLayout();
+
+        for (int r = 0; r < rows.Length && r < layout.Count; r++)
+        {
+            Transform rowParent = rows[r];
+            if (rowParent == null) continue;
+
+            foreach (var key in layout[r])
+            {
+                CreateKey(key, rowParent);
             }
         }
 
-        private System.Collections.IEnumerator FlashKeyRoutine(GameObject keyObj)
-        {
-            // Collect ALL Graphic components on this key (Image background + TMP label).
-            // We animate color.a directly — Row CanvasGroups now stay at alpha=1 always,
-            // so individual key graphics are always renderable by Unity.
-            Graphic[] graphics = keyObj.GetComponentsInChildren<Graphic>(true);
-            if (graphics.Length == 0) yield break;
+        BuildKeyMap();
+        Debug.Log("[KeyboardController] Keyboard layout generated successfully!");
+    }
 
-            // Snap all key graphics to fully visible
-            foreach (Graphic g in graphics)
+    [ContextMenu("Clear Keyboard")]
+    public void ClearKeyboard()
+    {
+        if (rows == null) return;
+
+        foreach (var row in rows)
+        {
+            if (row == null) continue;
+            for (int i = row.childCount - 1; i >= 0; i--)
             {
+                DestroyImmediate(row.GetChild(i).gameObject);
+            }
+        }
+        keyMap.Clear();
+    }
+
+    private void CreateKey(KeyData key, Transform parent)
+    {
+        if (key.isSpacer)
+        {
+            GameObject spacerObj = new GameObject("Spacer", typeof(RectTransform), typeof(LayoutElement));
+            spacerObj.transform.SetParent(parent, false);
+            var spacerLayout = spacerObj.GetComponent<LayoutElement>();
+            spacerLayout.flexibleWidth = key.flexibleWidth;
+            return;
+        }
+
+        GameObject keyObj = Instantiate(keyPrefab, parent);
+        keyObj.name = $"Key_{key.label}";
+
+        // Ensure key has CanvasGroup for individual tap flash
+        if (keyObj.GetComponent<CanvasGroup>() == null)
+        {
+            keyObj.AddComponent<CanvasGroup>();
+        }
+
+        // 1. Set key label text
+        var tmp = keyObj.GetComponentInChildren<TextMeshProUGUI>();
+        if (tmp != null)
+        {
+            tmp.text = key.label;
+            tmp.color = textColor;
+        }
+
+        // 2. Set keycap background color and corner scaling
+        var img = keyObj.GetComponent<Image>();
+        if (img != null)
+        {
+            img.color = key.isSpecial ? specialKeyColor : normalKeyColor;
+            img.pixelsPerUnitMultiplier = keyCornerScale;
+        }
+
+        // 3. Set proportional width
+        var layoutElement = keyObj.GetComponent<LayoutElement>();
+        if (layoutElement != null)
+        {
+            layoutElement.minWidth = 0;
+            layoutElement.preferredWidth = 0;
+            layoutElement.flexibleWidth = key.flexibleWidth;
+        }
+
+        // 4. Hook up button click event
+        var btn = keyObj.GetComponent<Button>();
+        if (btn != null)
+        {
+            string keyLabel = key.label;
+            var keyRt = keyObj.GetComponent<RectTransform>();
+            btn.onClick.AddListener(() => OnKeyButtonClicked(keyRt, keyLabel));
+        }
+    }
+
+    // =========================================================================
+    // Input Handling & Accuracy
+    // =========================================================================
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        if (!interactable) return;
+
+        // Tapped on the keyboard area or background (missed keys or tapped between keys)
+        HandleTapAtPosition(eventData.position, null, "Fallback");
+    }
+
+    private void OnKeyButtonClicked(RectTransform clickedKeyRt, string keyLabel)
+    {
+        if (!interactable) return;
+
+        // Ignore non-character function keys (Shift, Enter, etc.)
+        if (keyLabel == "Shift" || keyLabel == "Del" || keyLabel == "!#1" || keyLabel == "Enter")
+        {
+            return;
+        }
+
+        // Flash the tapped key briefly if the keyboard is currently hidden
+        if (isHidden && clickedKeyRt != null)
+        {
+            StartCoroutine(FlashKeyRoutine(clickedKeyRt.gameObject));
+        }
+
+        Vector2 exactScreenPos = Vector2.zero;
+
+        if (Pointer.current != null)
+        {
+            exactScreenPos = Pointer.current.position.ReadValue();
+        }
+
+        // Pass the exact pixel coordinates of the touch AND the target key for accuracy calculation
+        HandleTapAtPosition(exactScreenPos, clickedKeyRt, keyLabel);
+    }
+
+
+    private void HandleTapAtPosition(Vector2 screenPos, RectTransform tappedKeyRt, string sourceLabel)
+    {
+        if (sourceLabel == "Shift" || sourceLabel == "Del" || sourceLabel == "!#1" || sourceLabel == "Enter")
+        {
+            return;
+        }
+
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayKeyTap();
+        }
+
+        // Fade out keys on first character tap
+        if (!isHidden)
+        {
+            FadeOut();
+        }
+
+        // 1. Calculate accuracy based on target char
+        if (promptController != null && !promptController.IsCompleted)
+        {
+            char targetChar = promptController.CurrentTargetChar;
+            RectTransform targetKeyRect = null;
+            if (keyMap.Count == 0) BuildKeyMap();
+
+            keyMap.TryGetValue(targetChar, out targetKeyRect);
+
+            if (accuracyTracker != null)
+            {
+                accuracyTracker.RegisterTap(screenPos, targetKeyRect);
+                UpdateAmbientGlow(accuracyTracker.OverallScore);
+            }
+
+            promptController.AdvanceText();
+        }
+    }
+
+    private System.Collections.IEnumerator FlashKeyRoutine(GameObject keyObj)
+    {
+        // Collect ALL Graphic components on this key (Image background + TMP label).
+        // We animate color.a directly — Row CanvasGroups now stay at alpha=1 always,
+        // so individual key graphics are always renderable by Unity.
+        Graphic[] graphics = keyObj.GetComponentsInChildren<Graphic>(true);
+        if (graphics.Length == 0) yield break;
+
+        // Snap all key graphics to fully visible
+        foreach (Graphic g in graphics)
+        {
+            Color c = g.color;
+            c.a = 1f;
+            g.color = c;
+        }
+
+        // Brief hold (~80ms)
+        yield return new WaitForSeconds(0.08f);
+
+        // Fast smooth fade back to invisible (~120ms)
+        float t = 0f;
+        float duration = 0.12f;
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            float a = Mathf.Lerp(1f, 0f, t / duration);
+            foreach (var g in graphics)
+            {
+                if (g == null) continue;
                 Color c = g.color;
-                c.a = 1f;
+                c.a = a;
                 g.color = c;
             }
+            yield return null;
+        }
 
-            // Brief hold (~80ms)
-            yield return new WaitForSeconds(0.08f);
+        // Snap back to fully invisible
+        foreach (var g in graphics)
+        {
+            if (g == null) continue;
+            Color c = g.color;
+            c.a = 0f;
+            g.color = c;
+        }
+    }
 
-            // Fast smooth fade back to invisible (~120ms)
+    private void UpdateAmbientGlow(float score)
+    {
+        if (score >= 0.5f)
+        {
+            float t = Mathf.InverseLerp(0.5f, 1.0f, score);
+            targetGlowColor = Color.Lerp(midAccuracyColor, highAccuracyColor, t);
+        }
+        else
+        {
+            float t = Mathf.InverseLerp(0, 0.5f, score);
+            targetGlowColor = Color.Lerp(lowAccuracyColor, midAccuracyColor, t);
+        }
+    }
+
+    public void ResetState()
+    {
+        ambientAlphaMultiplier = 0f;
+        isHidden = false;
+        interactable = false;
+
+        var graphics = GetAllKeyGraphics();
+
+        foreach (var g in graphics)
+        {
+            if (g == null) continue;
+            Color c = g.color;
+            c.a = 1f;
+            g.color = c;
+        }
+
+        if (ambientGlowImage != null)
+        {
+            Color c = currentGlowColor;
+            c.a = 0f;
+            ambientGlowImage.color = c;
+        }
+
+        if (revealCanvasGroup != null)
+        {
+            revealCanvasGroup.alpha = 0f;
+        }
+    }
+
+    // Reveal & Fade Routines
+    public void FadeOut()
+    {
+        isHidden = true;
+        StartFade(0f, 1f); // Keys go to 0, ambient glow fades up to 1
+    }
+
+    public void FadeIn()
+    {
+        isHidden = false;
+        SetRowInteractivity(true); // Re-enable input as soon as keys start appearing
+        StartFade(1f, 0f); // Keys go to 1, ambient glow fades back down to 0
+    }
+
+    /// <summary>
+    /// Displays the overall accuracy percentage centered on the keyboard for a brief moment,
+    /// then fades it out and fades the keys back in.
+    /// </summary>
+    public void PlayRevealSequence(System.Action onComplete = null)
+    {
+        if (activeRevealRoutine != null)
+        {
+            StopCoroutine(activeRevealRoutine);
+        }
+        activeRevealRoutine = StartCoroutine(RevealRoutine(onComplete));
+    }
+
+    private System.Collections.IEnumerator RevealRoutine(System.Action onComplete)
+    {
+        if (revealAccuracyText != null && accuracyTracker != null)
+        {
+            revealAccuracyText.text = $"{accuracyTracker.OverallAccuracyInt}%";
+            // Match the ambient color but with full brightness/visibility
+            Color textColor = currentGlowColor;
+            textColor.a = 1.0f;
+            revealAccuracyText.color = textColor;
+        }
+
+        // 1. Fade In Reveal Text
+        if (revealCanvasGroup != null)
+        {
             float t = 0f;
-            float duration = 0.12f;
+            float duration = 0.25f;
             while (t < duration)
             {
                 t += Time.deltaTime;
-                float a = Mathf.Lerp(1f, 0f, t / duration);
-                foreach (var g in graphics)
-                {
-                    if (g == null) continue;
-                    Color c = g.color;
-                    c.a = a;
-                    g.color = c;
-                }
+                revealCanvasGroup.alpha = Mathf.Lerp(0f, 1f, t / duration);
                 yield return null;
             }
+            revealCanvasGroup.alpha = 1f;
 
-            // Snap back to fully invisible
-            foreach (var g in graphics)
+            // 2. Hold display so user can clearly see it
+            yield return new WaitForSeconds(0.9f);
+
+            // 3. Fade Out Reveal Text
+            t = 0f;
+            while (t < duration)
             {
-                if (g == null) continue;
-                Color c = g.color;
-                c.a = 0f;
-                g.color = c;
-            }
-        }
-
-        private void UpdateAmbientGlow(float score)
-        {
-            if (score >= 0.5f)
-            {
-                float t = Mathf.InverseLerp(0.5f, 1.0f, score);
-                targetGlowColor = Color.Lerp(midAccuracyColor, highAccuracyColor, t);
-            }
-            else
-            {
-                float t = Mathf.InverseLerp(0, 0.5f, score);
-                targetGlowColor = Color.Lerp(lowAccuracyColor, midAccuracyColor, t);
-            }
-        }
-
-        public void ResetState()
-        {
-            ambientAlphaMultiplier = 0f;
-            isHidden = false;
-            interactable = false;
-
-            var graphics = GetAllKeyGraphics();
-
-            foreach (var g in graphics)
-            {
-                if (g == null) continue;
-                Color c = g.color;
-                c.a = 1f;
-                g.color = c;
-            }
-
-            if (ambientGlowImage != null)
-            {
-                Color c = currentGlowColor;
-                c.a = 0f;
-                ambientGlowImage.color = c;
-            }
-
-            if (revealCanvasGroup != null)
-            {
-                revealCanvasGroup.alpha = 0f;
-            }
-        }
-
-        // Reveal & Fade Routines
-        public void FadeOut()
-        {
-            isHidden = true;
-            StartFade(0f, 1f); // Keys go to 0, ambient glow fades up to 1
-        }
-
-        public void FadeIn()
-        {
-            isHidden = false;
-            SetRowInteractivity(true); // Re-enable input as soon as keys start appearing
-            StartFade(1f, 0f); // Keys go to 1, ambient glow fades back down to 0
-        }
-
-        /// <summary>
-        /// Displays the overall accuracy percentage centered on the keyboard for a brief moment,
-        /// then fades it out and fades the keys back in.
-        /// </summary>
-        public void PlayRevealSequence(System.Action onComplete = null)
-        {
-            if (activeRevealRoutine != null)
-            {
-                StopCoroutine(activeRevealRoutine);
-            }
-            activeRevealRoutine = StartCoroutine(RevealRoutine(onComplete));
-        }
-
-        private System.Collections.IEnumerator RevealRoutine(System.Action onComplete)
-        {
-            if (revealAccuracyText != null && accuracyTracker != null)
-            {
-                revealAccuracyText.text = $"{accuracyTracker.OverallAccuracyInt}%";
-                // Match the ambient color but with full brightness/visibility
-                Color textColor = currentGlowColor;
-                textColor.a = 1.0f;
-                revealAccuracyText.color = textColor;
-            }
-
-            // 1. Fade In Reveal Text
-            if (revealCanvasGroup != null)
-            {
-                float t = 0f;
-                float duration = 0.25f;
-                while (t < duration)
-                {
-                    t += Time.deltaTime;
-                    revealCanvasGroup.alpha = Mathf.Lerp(0f, 1f, t / duration);
-                    yield return null;
-                }
-                revealCanvasGroup.alpha = 1f;
-
-                // 2. Hold display so user can clearly see it
-                yield return new WaitForSeconds(0.9f);
-
-                // 3. Fade Out Reveal Text
-                t = 0f;
-                while (t < duration)
-                {
-                    t += Time.deltaTime;
-                    revealCanvasGroup.alpha = Mathf.Lerp(1f, 0f, t / duration);
-                    yield return null;
-                }
-                revealCanvasGroup.alpha = 0f;
-            }
-
-            // 4. Fade keys back in
-            FadeIn();
-            onComplete?.Invoke();
-            activeRevealRoutine = null;
-        }
-
-        private void StartFade(float targetKeyAlpha, float targetGlowAlpha)
-        {
-            if (activeFadeRoutine != null)
-            {
-                StopCoroutine(activeFadeRoutine);
-            }
-            activeFadeRoutine = StartCoroutine(FadeRoutine(targetKeyAlpha, targetGlowAlpha));
-        }
-
-        private System.Collections.IEnumerator FadeRoutine(float targetKeyAlpha, float targetGlowAlpha)
-        {
-            // Collect all Graphic components (Image + TMP) across all rows.
-            var graphics = GetAllKeyGraphics();
-            float startKeyAlpha = graphics.Count > 0 ? graphics[0].color.a : (targetKeyAlpha > 0.5f ? 0f : 1f);
-            float startGlowAlpha = ambientAlphaMultiplier;
-            float elapsed = 0f;
-
-            while (elapsed < fadeDuration)
-            {
-                elapsed += Time.deltaTime;
-                float pct = elapsed / fadeDuration;
-                float currentKeyAlpha = Mathf.Lerp(startKeyAlpha, targetKeyAlpha, pct);
-                ambientAlphaMultiplier = Mathf.Lerp(startGlowAlpha, targetGlowAlpha, pct);
-
-                foreach (var g in graphics)
-                {
-                    if (g == null) continue;
-                    Color c = g.color;
-                    c.a = currentKeyAlpha;
-                    g.color = c;
-                }
+                t += Time.deltaTime;
+                revealCanvasGroup.alpha = Mathf.Lerp(1f, 0f, t / duration);
                 yield return null;
             }
+            revealCanvasGroup.alpha = 0f;
+        }
 
-            // Snap to final values
+        // 4. Fade keys back in
+        FadeIn();
+        onComplete?.Invoke();
+        activeRevealRoutine = null;
+    }
+
+    private void StartFade(float targetKeyAlpha, float targetGlowAlpha)
+    {
+        if (activeFadeRoutine != null)
+        {
+            StopCoroutine(activeFadeRoutine);
+        }
+        activeFadeRoutine = StartCoroutine(FadeRoutine(targetKeyAlpha, targetGlowAlpha));
+    }
+
+    private System.Collections.IEnumerator FadeRoutine(float targetKeyAlpha, float targetGlowAlpha)
+    {
+        // Collect all Graphic components (Image + TMP) across all rows.
+        var graphics = GetAllKeyGraphics();
+        float startKeyAlpha = graphics.Count > 0 ? graphics[0].color.a : (targetKeyAlpha > 0.5f ? 0f : 1f);
+        float startGlowAlpha = ambientAlphaMultiplier;
+        float elapsed = 0f;
+
+        while (elapsed < fadeDuration)
+        {
+            elapsed += Time.deltaTime;
+            float pct = elapsed / fadeDuration;
+            float currentKeyAlpha = Mathf.Lerp(startKeyAlpha, targetKeyAlpha, pct);
+            ambientAlphaMultiplier = Mathf.Lerp(startGlowAlpha, targetGlowAlpha, pct);
+
             foreach (var g in graphics)
             {
                 if (g == null) continue;
                 Color c = g.color;
-                c.a = targetKeyAlpha;
+                c.a = currentKeyAlpha;
                 g.color = c;
             }
-            ambientAlphaMultiplier = targetGlowAlpha;
-            activeFadeRoutine = null;
+            yield return null;
         }
 
-        /// <summary>
-        /// Returns all Graphic components (Image + TMP) across all key rows.
-        /// Used for per-Graphic alpha fading — never touch Row CanvasGroup alpha.
-        /// </summary>
-        private List<Graphic> GetAllKeyGraphics()
+        // Snap to final values
+        foreach (var g in graphics)
         {
-            var list = new List<Graphic>();
-            if (rows == null) return list;
-            foreach (var row in rows)
-            {
-                if (row == null) continue;
-                var graphics = row.GetComponentsInChildren<Graphic>(true);
-                foreach (var g in graphics)
-                    list.Add(g);
-            }
-            return list;
+            if (g == null) continue;
+            Color c = g.color;
+            c.a = targetKeyAlpha;
+            g.color = c;
         }
+        ambientAlphaMultiplier = targetGlowAlpha;
+        activeFadeRoutine = null;
+    }
 
-        /// <summary>
-        /// Toggles interactable and blocksRaycasts on all Row CanvasGroups.
-        /// Row CG alpha is ALWAYS kept at 1 so children remain renderable by Unity.
-        /// </summary>
-        private void SetRowInteractivity(bool interactable)
+    /// <summary>
+    /// Returns all Graphic components (Image + TMP) across all key rows.
+    /// Used for per-Graphic alpha fading — never touch Row CanvasGroup alpha.
+    /// </summary>
+    private List<Graphic> GetAllKeyGraphics()
+    {
+        var list = new List<Graphic>();
+        if (rows == null) return list;
+        foreach (var row in rows)
         {
-            if (rows == null) return;
-            foreach (var row in rows)
-            {
-                if (row == null) continue;
-                var cg = row.GetComponent<CanvasGroup>();
-                if (cg == null) cg = row.gameObject.AddComponent<CanvasGroup>();
-                cg.alpha = 1f; // Never change — changing this blocks all child rendering!
-                cg.interactable = interactable;
-                cg.blocksRaycasts = interactable;
-            }
+            if (row == null) continue;
+            var graphics = row.GetComponentsInChildren<Graphic>(true);
+            foreach (var g in graphics)
+                list.Add(g);
         }
+        return list;
+    }
 
-        // Layout Definition
-        private List<List<KeyData>> GetDefaultQwertzLayout()
+    /// <summary>
+    /// Toggles interactable and blocksRaycasts on all Row CanvasGroups.
+    /// Row CG alpha is ALWAYS kept at 1 so children remain renderable by Unity.
+    /// </summary>
+    private void SetRowInteractivity(bool interactable)
+    {
+        if (rows == null) return;
+        foreach (var row in rows)
         {
-            return new List<List<KeyData>>
+            if (row == null) continue;
+            var cg = row.GetComponent<CanvasGroup>();
+            if (cg == null) cg = row.gameObject.AddComponent<CanvasGroup>();
+            cg.alpha = 1f; // Never change — changing this blocks all child rendering!
+            cg.interactable = interactable;
+            cg.blocksRaycasts = interactable;
+        }
+    }
+
+    // Layout Definition
+    private List<List<KeyData>> GetDefaultQwertzLayout()
+    {
+        return new List<List<KeyData>>
             {
                 // Row 0: Number row
                 new()
@@ -658,6 +659,5 @@ namespace TapInstinct.UI
                     new() { label = "Enter", flexibleWidth = 1.3f, isSpecial = true },
                 }
             };
-        }
     }
 }

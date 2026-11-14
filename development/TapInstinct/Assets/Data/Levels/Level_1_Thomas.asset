@@ -38,7 +38,7 @@ MonoBehaviour:
     npcDelay: 1
     playerTargetPrompt: 'gutespasswort123 hab mich vertippt.
 
-      Handytastatur ist  irgendwie schrott'
+      Handytastatur ist irgendwie schrott'
     timeLimit: 0
   - npcMessage: "Hmm ok hat geklappt danke. Viel Spa\xDF\nauf der Feier sp\xE4ter!"
     npcDelay: 1.9

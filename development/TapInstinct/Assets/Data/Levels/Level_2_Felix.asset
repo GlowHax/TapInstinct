@@ -22,27 +22,33 @@ MonoBehaviour:
   isUnlocked: 0
   requiredAccuracy: 85
   steps:
-  - npcMessage: 'Hey! Er ist gerade Abgelenkt, was hast du bei Aufgabe 2? '
+  - npcMessage: 'Hey! Er ist gerade Abgelenkt, was hast du bei
+
+      Aufgabe 2? '
     npcDelay: 1.5
-    playerTargetPrompt: Chatten waehrend der Mathe Pruefung... genial.
+    playerTargetPrompt: 'Chatten waehrend der Mathe Pruefung...
+
+      genial.'
     timeLimit: 0
-  - npcMessage: "Ich wei\xDF. Was hast du aber jetzt als Ergebnis bei 2.?"
+  - npcMessage: "Ich wei\xDF. Was hast du aber jetzt als Ergebnis\nbei 2.?"
     npcDelay: 2
     playerTargetPrompt: 24,5 Prozent. Bin mir aber nicht sicher.
     timeLimit: 0
-  - npcMessage: Ok und bei 4.? Diese Gleichung ist total kompliziert!
+  - npcMessage: 'Ok und bei 4.? Diese Gleichung ist total
+
+      kompliziert!'
     npcDelay: 2
-    playerTargetPrompt: 'Du hast echt nicht gelernt vorher oder '
+    playerTargetPrompt: Du hast echt nicht gelernt vorher oder
     timeLimit: 0
   - npcMessage: 'vielleicht :) '
     npcDelay: 1
     playerTargetPrompt: 'Ok ich sags dir, wenn du mir am Wochenende
 
-      einen Drink ausgibst. '
+      einen Drink ausgibst.'
     timeLimit: 0
   - npcMessage: 'Nagut nagut, mach ich. Aber beeil dich,
 
       der Prof kommt in deine Richtung! '
     npcDelay: 2.6
-    playerTargetPrompt: 'Ok ich habe da 103 meter als Ergebnis '
+    playerTargetPrompt: Ok ich habe da 103 meter als Ergebnis
     timeLimit: 0

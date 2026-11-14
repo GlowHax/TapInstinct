@@ -34,13 +34,17 @@ MonoBehaviour:
     npcDelay: 3
     playerTargetPrompt: 'Ja den meine ich. Meine Tastatur auf dem
 
-      Handy funktioniert nicht richtig. '
+      Handy funktioniert nicht richtig.'
     timeLimit: 0
   - npcMessage: 'Jetzt ist das Bild blau und es summt. '
     npcDelay: 1.5
-    playerTargetPrompt: 'Dann steck einmal das Kabel ab und wieder rein. '
+    playerTargetPrompt: 'Dann steck einmal das Kabel ab und
+
+      wieder rein.'
     timeLimit: 0
-  - npcMessage: "Es l\xE4uft! Danke dir. Wenn du mich das n\xE4chste Mal besuchen kommst, backe ich dir einen sch\xF6nen Kuchen! "
+  - npcMessage: "Es l\xE4uft! Danke dir. Wenn du mich das n\xE4chste Mal\nbesuchen kommst, backe ich dir einen sch\xF6nen\nKuchen! "
     npcDelay: 1.5
-    playerTargetPrompt: 'Gerne doch, freut mich zu hoeren. Richte Opa viele Gruesse von mir aus. '
+    playerTargetPrompt: 'Gerne doch, freut mich zu hoeren. Richte
+
+      Opa viele Gruesse von mir aus. '
     timeLimit: 0

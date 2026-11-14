@@ -1,6 +1,4 @@
-using TapInstinct.Core;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class UIManager : MonoBehaviour
 {
