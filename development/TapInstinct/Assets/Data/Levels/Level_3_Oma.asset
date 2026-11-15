@@ -42,9 +42,9 @@ MonoBehaviour:
 
       wieder rein.'
     timeLimit: 0
-  - npcMessage: "Es l\xE4uft! Danke dir. Wenn du mich das n\xE4chste Mal\nbesuchen kommst, backe ich dir einen sch\xF6nen\nKuchen! "
+  - npcMessage: "Es l\xE4uft! Danke dir. Wenn du mich das\nn\xE4chste Mal besuchen kommst, backe\nich dir einen sch\xF6nen Kuchen! "
     npcDelay: 1.5
     playerTargetPrompt: 'Gerne doch, freut mich zu hoeren. Richte
 
-      Opa viele Gruesse von mir aus. '
+      Opa viele Gruesse von mir aus.'
     timeLimit: 0
